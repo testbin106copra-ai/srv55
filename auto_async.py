@@ -970,10 +970,26 @@ async def run_checkout_for_card_async(shop_url: str, card_entry: str,
             if not actions_url:
                 raise Exception("could not find actions JS URL")
             js_body     = await fetch_actions_js(client, actions_url, shop_url)
+            
             proposal_id = extract_proposal_id(js_body)
             submit_id   = extract_submit_for_completion_id(js_body)
+            
+            # نظام احتياطي (Fallback) لاستخراج الـ IDs لو تغيرت التسميات المضغوطة في شوبيفاي
+            if not proposal_id:
+                all_hex = re.findall(r'"([a-f0-9]{64})"', js_body)
+                if all_hex:
+                    proposal_id = all_hex[0]
+            
+            if not submit_id:
+                all_hex = re.findall(r'"([a-f0-9]{64})"', js_body)
+                if len(all_hex) > 1:
+                    submit_id = all_hex[1]
+                elif all_hex:
+                    submit_id = all_hex[0]
+
             if not proposal_id or not submit_id:
                 raise Exception("missing Proposal or Submit ID")
+                
             poll_for_receipt_id = "978b340f3027dc55313349c4089004147b6b0dccee75e42ed97685ef1feae418"
         except Exception as e:
             result.status = CheckStatus.ERROR
@@ -1242,7 +1258,6 @@ async def run_checkout_for_card_async(shop_url: str, card_entry: str,
                 result.error  = Exception(f"poll {poll_num} failed: {e}")
                 return result
 
-        # ✅ خلصت المحاولات ولسه ProcessingReceipt → ERROR + retry
         result.status      = CheckStatus.ERROR
         result.status_code = "PROCESSING"
         result.error       = Exception("PROCESSING")
