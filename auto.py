@@ -480,29 +480,23 @@ def fetch_private_access_token(client: TLSClient, shop_url: str, checkout_url: s
 
 
 # ──────────────────────── Step 3: actions JS ─────────────────────────
-
 def extract_actions_js_url(checkout_html: str, shop_url: str) -> str:
-    # 1. التجربة بالطريقة الأصلية أو البحث عن أي مسار يحتوي على actions و .js
-    match = re.search(r'(/cdn/shopifycloud/checkout-web/[^"\']+/actions[^"\']*\.js)', checkout_html)
+    # 1. التجربة بالطريقة الأصلية أولاً
+    match = re.search(r'(/cdn/shopifycloud/checkout-web/assets/c1/actions[A-Za-z0-9_-]*\.[A-Za-z0-9_-]+\.js)', checkout_html)
     if match:
-        return shop_url + match.group_by(1) if hasattr(match, 'group_by') else shop_url + match.group(1)
+        return shop_url + match.group(1)
     
-    # 2. بحث أوسع لأي ملف يخص الـ actions
-    match_broad = re.search(r'((?:https?:)?//[^"\']+/actions[A-Za-z0-9_-]*\.[A-Za-z0-9_-]+\.js)', checkout_html)
-    if match_broad:
-        url = match_broad.group(1)
-        if url.startswith('//'):
-            return "https:" + url
-        return url if url.startswith('http') else shop_url + url
-
-    # 3. بحث شامل عن أي رابط جافاسكريبت داخل صفحة الدفع لو فشلت الطرق السابقة
-    match_fallback = re.search(r'src="([^"]+/actions[^"]+\.js)"', checkout_html)
+    # 2. بحث مرن عن أي ملف .js يخص الـ checkout-web في الشوبيفاي الحديث
+    match_fallback = re.search(r'(/cdn/shopifycloud/checkout-web/[^"\']+\.js)', checkout_html)
     if match_fallback:
-        url = match_fallback.group(1)
-        return shop_url + url if not url.startswith('http') else url
+        return shop_url + match_fallback.group(1)
+        
+    # 3. بحث شامل بروابط مطلقة لو وجدت
+    match_abs = re.search(r'(https?://[^"\']+/cdn/shopifycloud/checkout-web/[^"\']+\.js)', checkout_html)
+    if match_abs:
+        return match_abs.group(1)
 
     return ""
-
 def fetch_actions_js(client: TLSClient, actions_url: str, shop_url: str) -> str:
     headers = {
         "accept": "*/*",
