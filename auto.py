@@ -517,12 +517,30 @@ def fetch_actions_js(client: TLSClient, actions_url: str, shop_url: str) -> str:
     return resp.text
 
 def extract_proposal_id(js_body: str) -> str:
-    match = re.search(r'id:\s*"([a-f0-9]{64})"\s*,\s*type:\s*"query"\s*,\s*name:\s*"Proposal"', js_body)
-    return match.group(1) if match else ""
+    patterns = [
+        r'id:\s*"([a-f0-9]{32,64})"\s*,\s*type:\s*"query"\s*,\s*name:\s*"Proposal"',
+        r'name:\s*"Proposal"\s*,\s*type:\s*"query"\s*,\s*id:\s*"([a-f0-9]{32,64})"',
+        r'"Proposal"[^}]{0,200}id:\s*"([a-f0-9]{32,64})"',
+        r'Proposal[^}]{0,300}?([a-f0-9]{32,64})'
+    ]
+    for p in patterns:
+        match = re.search(p, js_body)
+        if match:
+            return match.group(1)
+    return ""
 
 def extract_submit_for_completion_id(js_body: str) -> str:
-    match = re.search(r'id:\s*"([a-f0-9]{64})"\s*,\s*type:\s*"mutation"\s*,\s*name:\s*"SubmitForCompletion"', js_body)
-    return match.group(1) if match else ""
+    patterns = [
+        r'id:\s*"([a-f0-9]{32,64})"\s*,\s*type:\s*"mutation"\s*,\s*name:\s*"SubmitForCompletion"',
+        r'name:\s*"SubmitForCompletion"\s*,\s*type:\s*"mutation"\s*,\s*id:\s*"([a-f0-9]{32,64})"',
+        r'"SubmitForCompletion"[^}]{0,200}id:\s*"([a-f0-9]{32,64})"',
+        r'SubmitForCompletion[^}]{0,300}?([a-f0-9]{32,64})'
+    ]
+    for p in patterns:
+        match = re.search(p, js_body)
+        if match:
+            return match.group(1)
+    return ""
 
 def extract_poll_for_receipt_id(js_body: str) -> str:
     patterns = [
