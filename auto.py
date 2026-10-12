@@ -480,21 +480,19 @@ def fetch_private_access_token(client: TLSClient, shop_url: str, checkout_url: s
 
 
 # ──────────────────────── Step 3: actions JS ─────────────────────────
-def extract_actions_js_url(checkout_html: str, shop_url: str) -> str:
-    # 1. التجربة بالطريقة الأصلية أولاً
-    match = re.search(r'(/cdn/shopifycloud/checkout-web/assets/c1/actions[A-Za-z0-9_-]*\.[A-Za-z0-9_-]+\.js)', checkout_html)
-    if match:
-        return shop_url + match.group(1)
-    
-    # 2. بحث مرن عن أي ملف .js يخص الـ checkout-web في الشوبيفاي الحديث
-    match_fallback = re.search(r'(/cdn/shopifycloud/checkout-web/[^"\']+\.js)', checkout_html)
-    if match_fallback:
-        return shop_url + match_fallback.group(1)
-        
-    # 3. بحث شامل بروابط مطلقة لو وجدت
-    match_abs = re.search(r'(https?://[^"\']+/cdn/shopifycloud/checkout-web/[^"\']+\.js)', checkout_html)
-    if match_abs:
-        return match_abs.group(1)
+def extract_all_checkout_js_urls(checkout_html: str, shop_url: str) -> List[str]:
+    if not checkout_html:
+        return []
+    matches = re.findall(
+        r'(/cdn/shopifycloud/checkout-web/assets/[A-Za-z0-9_\-/]+\.[A-Za-z0-9_\-]+\.js)',
+        checkout_html
+    )
+    seen, urls = set(), []
+    for m in matches:
+        if m not in seen:
+            seen.add(m)
+            urls.append(shop_url + m)
+    return urls
 
     return ""
 def fetch_actions_js(client: TLSClient, actions_url: str, shop_url: str) -> str:
